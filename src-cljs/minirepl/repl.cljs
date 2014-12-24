@@ -13,6 +13,13 @@
                     :data-lang "clojure"}
         content))))
 
+(defn repl-expression-header [line-number]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:className "expression-header"}
+               (str line-number " =>")))))
+
 (defn repl-expression [expression owner]
   (reify
     om/IRender
@@ -39,8 +46,7 @@
       (render [_]
         (dom/li #js {:className "print-expression"
                      :key       line-number}
-          (dom/div #js {:className "expression-header"}
-            (str line-number " =>"))
+          (om/build repl-expression-header line-number)
           (dom/div #js {:className "repl-expression"}
             (om/build repl-expression e)
             (om/build repl-value
@@ -98,8 +104,7 @@
     om/IRenderState
     (render-state [_ {:keys [expression reader-chan]}]
       (dom/div #js {:className "repl-reader print-expression"}
-        (dom/div #js {:className "expression-header"}
-          (str (count (:history session)) " =>"))
+        (om/build repl-expression-header (count (:history session)))
         (dom/textarea #js {:className "repl-text-input repl-expression"
                            :ref       "expression"
                            :id        "repl-reader"
