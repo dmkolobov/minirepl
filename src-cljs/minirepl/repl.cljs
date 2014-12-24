@@ -13,21 +13,21 @@
                     :data-lang "clojure"}
         content))))
 
-(defn repl-expression-header [line-number]
+(defn print-expr-header [line-number]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:className "expression-header"}
                (str line-number " =>")))))
 
-(defn repl-expression [expression owner]
+(defn print-expr-code [expression owner]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:className "expression-text"}
         (om/build static-mirror expression)))))
 
-(defn repl-value [val owner]
+(defn print-expr-value [val owner]
   (let [{:keys [value out evaled]} val]
     (reify
       om/IRender
@@ -38,7 +38,7 @@
             (dom/div #js {:className "evaluation-spinner"}
               (dom/span #js {:className "fa fa-spinner fa-spin"}))))))))
 
-(defn print-item [params owner]
+(defn print-expression [params owner]
   (let [[line-number item]           params
         {:keys [e value evaled out]} item]
     (reify
@@ -46,10 +46,10 @@
       (render [_]
         (dom/li #js {:className "print-expression"
                      :key       line-number}
-          (om/build repl-expression-header line-number)
+          (om/build print-expr-header line-number)
           (dom/div #js {:className "repl-expression"}
-            (om/build repl-expression e)
-            (om/build repl-value
+            (om/build print-expr-code e)
+            (om/build print-expr-value
                       {:value  value
                        :out    out
                        :evaled evaled})))))))
@@ -67,7 +67,7 @@
       (apply
         dom/ul #js {:className "repl-printer"}
         (om/build-all
-          print-item
+          print-expression
           (map-indexed (fn [line-num item]
                          [line-num item])
                        (:history session)))))))
@@ -104,7 +104,7 @@
     om/IRenderState
     (render-state [_ {:keys [expression user-input-chan]}]
       (dom/div #js {:className "repl-reader print-expression"}
-        (om/build repl-expression-header (count (:history session)))
+        (om/build print-expr-header (count (:history session)))
         (dom/textarea #js {:className "repl-text-input repl-expression"
                            :ref       "expression"
                            :id        "repl-reader"
