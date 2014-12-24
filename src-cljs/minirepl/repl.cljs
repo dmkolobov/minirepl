@@ -1,9 +1,9 @@
 (ns minirepl.repl
-  (:require [minirepl.session :as repl-session]
+  (:require [minirepl.util :as util]
+            [minirepl.session :as repl-session]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [cljs.core.async :as async :refer [chan put! <!]])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+            [cljs.core.async :as async :refer [chan put!]]))
 
 (defn static-mirror [content owner]
   (reify
@@ -80,7 +80,7 @@
 
     om/IDidMount
     (did-mount [_]
-      (let [{:keys [reader-chan]} (om/get-state owner)
+      (let [{:keys [user-input-chan]} (om/get-state owner)
             code-mirror (.fromTextArea js/CodeMirror
                           (.getElementById js/document "repl-reader")
                           #js {:mode      "clojure"
@@ -90,7 +90,7 @@
                                :extraKeys
                                #js {:Cmd-E
                                     (fn [cm]
-                                      (put! reader-chan
+                                      (put! user-input-chan
                                             (om/get-state owner :expression))
                                       (.setValue cm "")
                                       (om/set-state! owner :expression ""))}})]
@@ -102,7 +102,7 @@
                  (om/set-state! owner :expression current-val))))))
 
     om/IRenderState
-    (render-state [_ {:keys [expression reader-chan]}]
+    (render-state [_ {:keys [expression user-input-chan]}]
       (dom/div #js {:className "repl-reader print-expression"}
         (om/build repl-expression-header (count (:history session)))
         (dom/textarea #js {:className "repl-text-input repl-expression"
@@ -111,32 +111,46 @@
                            :cols      80}
           nil)))))
 
+(defn process-input!
+  "FIXME"
+
+  [session code done]
+  (let [expression  (repl-session/new-expression code)
+        line-number (count (:history @session))]
+    (repl-session/read! expression #(done [line-number %]))
+    (om/transact! session :history #(conj % expression))))
+
+(defn process-response!
+  "FIXME"
+
+  [session compiler-response]
+  (let [[line-number compiler-object] compiler-response
+        session* (repl-session/eval! @session line-number compiler-object)]
+    (om/transact! session (constantly session*))))
+
 (defn repl-component [session owner]
   (reify
     om/IInitState
     (init-state [_]
-      {:reader-chan (chan)
-       :eval-chan   (chan)})
+      {:user-input-chan      (chan)
+       :compiler-output-chan (chan)})
 
     om/IWillMount
     (will-mount [_]
-      (let [{:keys [reader-chan eval-chan]} (om/get-state owner)]
-        (go (loop []
-          (let [expression  (repl-session/new-expression (<! reader-chan))
-                line-number (count (:history @session))]
-            (repl-session/read! expression  #(put! eval-chan [line-number %]))
-            (om/transact! session :history #(conj % expression))
-            (recur))))
-        (go (loop []
-          (let [[line-number compilation-response] (<! eval-chan)]
-            (let [session* (repl-session/eval! @session line-number compilation-response)]
-              (om/transact! session (constantly session*)))
-            (recur))))))
+      (let [{:keys [user-input-chan compiler-output-chan]} (om/get-state owner)]
+        (util/consume-channel
+          (fn [code]
+            (process-input! session code #(put! compiler-output-chan %)))
+          user-input-chan)
+        (util/consume-channel
+          (fn [compiler-response]
+            (process-response! session compiler-response))
+          compiler-output-chan)))
 
     om/IRenderState
-    (render-state [this {:keys [reader-chan]}]
+    (render-state [this {:keys [user-input-chan]}]
       (dom/div #js {:className "web-repl"}
         (om/build repl-printer session)
         (om/build repl-reader
                   session
-                  {:init-state {:reader-chan reader-chan}})))))
+                  {:init-state {:user-input-chan user-input-chan}})))))

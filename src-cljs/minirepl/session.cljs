@@ -79,14 +79,14 @@
                       (on-read compilation-response))})))
 
 (defmulti eval!
-  (fn [_ _ read-response]
-    (cond (contains? read-response :compiled-js) :compiled-js
-          (contains? read-response :compiler-error) :compiler-error)))
+  (fn [_ _ compiler-object]
+    (cond (contains? compiler-object :compiled-js) :compiled-js
+          (contains? compiler-object :compiler-error) :compiler-error)))
 
 (defmethod eval! :compiler-error
-  [session line-number read-response]
+  [session line-number compiler-object]
 
-  (let [compiler-error (:compiler-error read-response)]
+  (let [compiler-error (:compiler-error compiler-object)]
    (update-in session
              [:history line-number]
              #(assoc % :value  compiler-error
@@ -94,9 +94,9 @@
                        :evaled true))))
 
 (defmethod eval! :compiled-js
-  [session line-number read-response]
+  [session line-number compiler-object]
 
-  (let [compiled-js (:compiled-js read-response)]
+  (let [compiled-js (:compiled-js compiler-object)]
     (within session line-number #(execjs! compiled-js))
     (let [value user-session/*return*
           e-out user-session/*out*]
