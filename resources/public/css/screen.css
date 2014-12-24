@@ -1,0 +1,132 @@
+html,
+body {
+  background: #221222; /* pastel-on-dark background */
+	font-family: 'Monaco', monospace;
+  padding: 0.5em;
+}
+pre {margin: 0}
+
+
+#app {
+    position: relative;
+    margin: 0;
+}
+
+.web-repl {
+  height: 100%;
+  position: relative;
+}
+
+.CodeMirror, .static-mirror {
+  font-family: 'Monaco', monospace;
+  font-size: 14px;
+}
+
+/* Printer */
+
+.repl-printer {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.print-expression{
+  display: table;
+  width: 100%;
+}
+
+.repl-expression, .expression-header {
+  display: table-cell;
+}
+
+.expression-header {
+  padding: 0;
+  color: #b9b6b0;
+  font-size: 14px;
+  width: 1px;
+  padding: 0 1em 0 0;
+  white-space: nowrap;
+}
+
+.expression-text {
+  border-style: none none solid none;
+  border-color: #666;
+  border-width: 0 0 1px 0;
+}
+
+.CodeMirror, .CodeMirror-scroll {
+  height: auto;
+}
+
+.print-expression {
+    margin: 0.5em 0;
+}
+
+.static-mirror, .CodeMirror, .evaluation-spinner {
+  line-height: 1.5em;
+  padding: 0.5em;
+}
+
+/* Reader */
+
+.repl-reader {
+    position: relative;
+
+    border-style: solid none none none;
+    border-width: 1px 0 0 0;
+    border-color: #444;
+
+    width: 100%;
+    font-family: 'Monaco', monospace;
+}
+
+.repl-text-input {
+    position: relative;
+    resize: vertical;
+    display: block;
+    margin: 0 0 1em 0;
+    width: 100%;
+}
+
+/* Eval */
+
+.repl-submit {
+    display: block;
+    width: 4em;
+    text-transform: uppercase;
+    padding: 0.5em;
+    background: #99E2CA;
+    transition: box-shadow 0.5s;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+}
+
+.repl-submit:hover {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+}
+
+/* Extensions to paraiso-dark */
+
+.static-mirror, .evaluation-spinner {
+  background: #2f1e2e;
+  color: #b9b6b0;
+}
+
+
+.shadow-1 {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+}
+.shadow-2 {
+  box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+}
+.shadow-3 {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+}
+.shadow-4 {
+  box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+}
+.shadow-5 {
+  box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+}
+.shadow-5 {
+  box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+}
