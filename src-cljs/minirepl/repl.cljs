@@ -11,10 +11,15 @@
                   :data-lang "clojure"}
              contents)))
 
+(defn spinner [_]
+  (om/component
+    (dom/div #js {:className "evaluation-spinner"}
+             (dom/div #js {:className "fa fa-spinner fa-spin"}))))
+
 (defn print-expr-header [line-number]
   (om/component
-      (dom/div #js {:className "expression-header"}
-               (str line-number " =>"))))
+    (dom/div #js {:className "expression-header"}
+             (str line-number " =>"))))
 
 (defn print-expr-code [expression owner]
   (om/component
@@ -27,8 +32,7 @@
       (dom/div #js {:className "expression-value"}
         (if evaled
           (om/build static-mirror out)
-          (dom/div #js {:className "evaluation-spinner"}
-            (dom/span #js {:className "fa fa-spinner fa-spin"})))))))
+          (om/build spinner nil))))))
 
 (defn print-expression [params owner]
   (let [[line-number item]           params
