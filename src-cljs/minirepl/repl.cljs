@@ -5,45 +5,35 @@
             [om.dom :as dom :include-macros true]
             [cljs.core.async :as async :refer [chan put!]]))
 
-(defn static-mirror [content owner]
-  (reify
-    om/IRender
-    (render [_]
-      (dom/pre #js {:className "static-mirror"
-                    :data-lang "clojure"}
-        content))))
+(defn static-mirror [contents]
+  (om/component
+    (dom/pre #js {:className "static-mirror"
+                  :data-lang "clojure"}
+             contents)))
 
 (defn print-expr-header [line-number]
-  (reify
-    om/IRender
-    (render [_]
+  (om/component
       (dom/div #js {:className "expression-header"}
-               (str line-number " =>")))))
+               (str line-number " =>"))))
 
 (defn print-expr-code [expression owner]
-  (reify
-    om/IRender
-    (render [_]
-      (dom/div #js {:className "expression-text"}
-        (om/build static-mirror expression)))))
+  (om/component
+    (dom/div #js {:className "expression-text"}
+      (om/build static-mirror expression))))
 
 (defn print-expr-value [val owner]
   (let [{:keys [value out evaled]} val]
-    (reify
-      om/IRender
-      (render [_]
-        (dom/div #js {:className "expression-value"}
-          (if evaled
-            (om/build static-mirror out)
-            (dom/div #js {:className "evaluation-spinner"}
-              (dom/span #js {:className "fa fa-spinner fa-spin"}))))))))
+    (om/component
+      (dom/div #js {:className "expression-value"}
+        (if evaled
+          (om/build static-mirror out)
+          (dom/div #js {:className "evaluation-spinner"}
+            (dom/span #js {:className "fa fa-spinner fa-spin"})))))))
 
 (defn print-expression [params owner]
   (let [[line-number item]           params
         {:keys [e value evaled out]} item]
-    (reify
-      om/IRender
-      (render [_]
+    (om/component
         (dom/li #js {:className "print-expression"
                      :key       line-number}
           (om/build print-expr-header line-number)
@@ -52,7 +42,7 @@
             (om/build print-expr-value
                       {:value  value
                        :out    out
-                       :evaled evaled})))))))
+                       :evaled evaled}))))))
 
 (defn repl-printer [session owner]
   (reify
@@ -121,7 +111,7 @@
     (om/transact! session :history #(conj % expression))))
 
 (defn process-response!
-  "FIXME"
+  "FIXME "
 
   [session compiler-response]
   (let [[line-number compiler-object] compiler-response
