@@ -1,20 +1,18 @@
 (ns minirepl.repl
   (:require [minirepl.util :as util]
             [minirepl.session :as repl-session]
+            [minirepl.editor :as editor]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.async :as async :refer [chan put!]]))
-
-(defn static-mirror [contents]
-  (om/component
-    (dom/pre #js {:className "static-mirror"
-                  :data-lang "clojure"}
-             contents)))
 
 (defn spinner [_]
   (om/component
     (dom/div #js {:className "evaluation-spinner"}
              (dom/div #js {:className "fa fa-spinner fa-spin"}))))
+
+;; Printing user expressions
+;; =========================
 
 (defn print-expr-header [line-number]
   (om/component
@@ -24,14 +22,14 @@
 (defn print-expr-code [expression owner]
   (om/component
     (dom/div #js {:className "expression-text"}
-      (om/build static-mirror expression))))
+      (om/build editor/static-mirror expression))))
 
 (defn print-expr-value [val owner]
   (let [{:keys [value out evaled]} val]
     (om/component
       (dom/div #js {:className "expression-value"}
         (if evaled
-          (om/build static-mirror out)
+          (om/build editor/static-mirror out)
           (om/build spinner nil))))))
 
 (defn print-expression [params owner]
@@ -66,44 +64,22 @@
                          [line-num item])
                        (:history session)))))))
 
+;; Reading user expressions
+;; ========================
+
 (defn repl-reader [session owner]
   (reify
-    om/IInitState
-    (init-state [_]
-      {:expression ""})
-
-    om/IDidMount
-    (did-mount [_]
-      (let [{:keys [user-input-chan]} (om/get-state owner)
-            code-mirror (.fromTextArea js/CodeMirror
-                          (.getElementById js/document "repl-reader")
-                          #js {:mode      "clojure"
-                               :matchBrackets     true
-                               :autoCloseBrackets true
-                               :theme             "paraiso-dark"
-                               :extraKeys
-                               #js {:Cmd-E
-                                    (fn [cm]
-                                      (put! user-input-chan
-                                            (om/get-state owner :expression))
-                                      (.setValue cm "")
-                                      (om/set-state! owner :expression ""))}})]
-        (.on code-mirror
-             "changes"
-             (fn [_]
-               (let [current-doc (.getDoc code-mirror)
-                     current-val (.getValue current-doc)]
-                 (om/set-state! owner :expression current-val))))))
-
     om/IRenderState
-    (render-state [_ {:keys [expression user-input-chan]}]
+    (render-state [_ {:keys [user-input-chan]}]
       (dom/div #js {:className "repl-reader print-expression"}
         (om/build print-expr-header (count (:history session)))
-        (dom/textarea #js {:className "repl-text-input repl-expression"
-                           :ref       "expression"
-                           :id        "repl-reader"
-                           :cols      80}
-          nil)))))
+        (om/build editor/mirror
+                  {:theme  "paraiso-dark"}
+                  {:init-state {:submit-chan user-input-chan}})))))
+
+
+;; Updating repl component state
+;; =============================
 
 (defn process-input!
   "FIXME"
@@ -121,6 +97,9 @@
   (let [[line-number compiler-object] compiler-response
         session* (repl-session/eval! @session line-number compiler-object)]
     (om/transact! session (constantly session*))))
+
+;; Main component
+;; ==============
 
 (defn repl-component [session owner]
   (reify
