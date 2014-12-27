@@ -19,13 +19,15 @@
    :theme             theme})
 
 (defn parse-options [submit-chan options]
-  (let [{:keys [content readonly number theme]} options]
+  (let [{:keys [content readonly number theme first-number]} options]
     (as-> (base-config theme) config
           (if readonly (assoc config :readOnly true)
                        (assoc config
                               :extraKeys (key-bindings submit-chan)
                               :autoCloseBrackets true))
-          (if number (assoc config :lineNumbers true) config)
+          (if number (assoc config :lineNumbers true
+                                   :firstLineNumber first-number)
+                     config)
           (if content (assoc config :value content)))))
 
 (defn mirror [options owner]

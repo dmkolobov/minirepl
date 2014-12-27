@@ -59,11 +59,18 @@
                       ":"
                       (.-lineNumber e)))))))
 
-(defn new-expression [code]
-  {:code       code
-   :out        ""
-   :value      nil
-   :evaled     false})
+(defn new-expression [code history]
+  (let [last-expr   (last history)
+        last-code   (:code last-expr)
+        line-number (+ (if last-code (count (.split (:code last-expr)
+                                            (js/RegExp. "\r\n|\r|\n")))
+                                     0)
+                       (:line-number last-expr))]
+    {:code        code
+     :out         ""
+     :value       nil
+     :evaled      false
+     :line-number line-number}))
 
 (defn read!
   "Sends an asynchronous request to compile the

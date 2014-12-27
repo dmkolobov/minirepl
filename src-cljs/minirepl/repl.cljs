@@ -17,10 +17,11 @@
 (defn print-expr-code [expression owner]
   (om/component
     (dom/div #js {:className "expression-code"}
-      (om/build editor/mirror {:theme   "paraiso-dark"
-                               :content  expression
-                               :number   true
-                               :readonly true}))))
+      (om/build editor/mirror {:theme        "paraiso-dark"
+                               :content      (:code expression)
+                               :number       true
+                               :first-number (:line-number expression)
+                               :readonly     true}))))
 
 (defn print-expr-value [val owner]
   (let [{:keys [value out evaled]} val]
@@ -38,7 +39,7 @@
     (om/component
         (dom/li #js {:className "repl-expression"
                      :key       line-number}
-            (om/build print-expr-code code)
+            (om/build print-expr-code expression)
             (dom/hr #js {:className "seam"})
             (om/build print-expr-value expression)))))
 
@@ -61,8 +62,8 @@
     (render-state [_ {:keys [source-chan]}]
       (dom/div #js {:className "repl-reader"}
         (om/build editor/mirror
-                  {:theme  "paraiso-dark"
-                   :number true
+                  {:theme   "paraiso-dark"
+                   :number  true
                    :content ""}
                   {:init-state {:submit-chan source-chan}})))))
 
@@ -74,9 +75,10 @@
   "FIXME"
 
   [session code done]
-  (let [expression  (repl-session/new-expression code)
-        line-number (count (:history @session))]
-    (repl-session/read! expression #(done [line-number %]))
+  (let [history    (:history @session)
+        expression (repl-session/new-expression code history)
+        index      (count history)]
+    (repl-session/read! expression #(done [index %]))
     (om/transact! session :history #(conj % expression))))
 
 (defn process-response!

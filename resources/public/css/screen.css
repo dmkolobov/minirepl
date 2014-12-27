@@ -52,7 +52,9 @@ pre {margin: 0}
 }
 
 /* User expression values */
-.expression-value .CodeMirror {}
+.expression-value .CodeMirror {
+  padding-left: 35px;
+}
 
 .CodeMirror, .CodeMirror-scroll {
   height: auto;
