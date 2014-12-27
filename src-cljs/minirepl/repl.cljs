@@ -67,12 +67,12 @@
 (defn repl-reader [session owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [user-input-chan]}]
+    (render-state [_ {:keys [source-chan]}]
       (dom/div #js {:className "repl-reader print-expression"}
         (om/build print-expr-header (count (:history session)))
         (om/build editor/mirror
                   {:theme  "paraiso-dark"}
-                  {:init-state {:submit-chan user-input-chan}})))))
+                  {:init-state {:submit-chan source-chan}})))))
 
 
 ;; Updating repl component state
@@ -102,25 +102,25 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:user-input-chan      (chan)
-       :compiler-output-chan (chan)})
+      {:source-chan   (chan)
+       :compiler-chan (chan)})
 
     om/IWillMount
     (will-mount [_]
-      (let [{:keys [user-input-chan compiler-output-chan]} (om/get-state owner)]
+      (let [{:keys [source-chan compiler-chan]} (om/get-state owner)]
         (util/consume-channel
           (fn [code]
-            (process-input! session code #(put! compiler-output-chan %)))
-          user-input-chan)
+            (process-input! session code #(put! compiler-chan %)))
+          source-chan)
         (util/consume-channel
           (fn [compiler-response]
             (process-response! session compiler-response))
-          compiler-output-chan)))
+          compiler-chan)))
 
     om/IRenderState
-    (render-state [this {:keys [user-input-chan]}]
+    (render-state [this {:keys [source-chan]}]
       (dom/div #js {:className "web-repl"}
         (om/build repl-printer session)
         (om/build repl-reader
                   session
-                  {:init-state {:user-input-chan user-input-chan}})))))
+                  {:init-state {:source-chan source-chan}})))))
