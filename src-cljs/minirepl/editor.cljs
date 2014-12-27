@@ -35,11 +35,20 @@
     om/IInitState
     (init-state [_] {})
 
+    om/IDidUpdate
+    (did-update [_ prev-props _]
+      (when (not= (:first-number options) (:first-number prev-props))
+        (.setOption (om/get-state owner :cm)
+                    "firstLineNumber"
+                    (options :first-number))))
+
     om/IDidMount
     (did-mount [_]
       (let [node (om/get-node owner)
             config (parse-options (om/get-state owner :submit-chan) options)]
-        (js/CodeMirror node (clj->js config))))
+        (om/set-state! owner
+                       :cm
+                       (js/CodeMirror node (clj->js config)))))
 
     om/IRenderState
     (render-state [_ _]

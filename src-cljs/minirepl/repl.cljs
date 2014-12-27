@@ -58,14 +58,20 @@
 
 (defn repl-reader [session owner]
   (reify
+    om/IDidUpdate
+    (did-update [_ _ _]
+                (om/refresh! owner))
+
     om/IRenderState
     (render-state [_ {:keys [source-chan]}]
-      (dom/div #js {:className "repl-reader"}
-        (om/build editor/mirror
-                  {:theme   "paraiso-dark"
-                   :number  true
-                   :content ""}
-                  {:init-state {:submit-chan source-chan}})))))
+      (let [line-number (repl-session/last-line-number (:history session))]
+        (dom/div #js {:className "repl-reader"}
+          (om/build editor/mirror
+                    {:theme        "paraiso-dark"
+                     :number       true
+                     :first-number line-number
+                     :content      ""}
+                    {:init-state {:submit-chan source-chan}}))))))
 
 
 ;; Updating repl component state

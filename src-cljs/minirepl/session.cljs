@@ -59,13 +59,15 @@
                       ":"
                       (.-lineNumber e)))))))
 
+(defn last-line-number [history]
+  (let [last-expression (last history)]
+    (if last-expression (+ (count (.split (:code last-expression)
+                                          (js/RegExp. "\r\n|\r|\n")))
+                                  (:line-number last-expression))
+                        0)))
+
 (defn new-expression [code history]
-  (let [last-expr   (last history)
-        last-code   (:code last-expr)
-        line-number (+ (if last-code (count (.split (:code last-expr)
-                                            (js/RegExp. "\r\n|\r|\n")))
-                                     0)
-                       (:line-number last-expr))]
+  (let [line-number (last-line-number history)]
     {:code        code
      :out         ""
      :value       nil
