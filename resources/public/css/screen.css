@@ -36,19 +36,23 @@ pre {margin: 0}
 
 .repl-expression {
   width: 100%;
+  margin: 0.5em 0;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+  /* material design, shadow 2 */
 }
 
 /* User expression codes */
-.expression-code {
+.expression-code {}
 
+.seam {
+  border-style: solid none;
+  border-width: 1px 0;
+  border-color: #221222;
+  margin: 0;
 }
 
 /* User expression values */
-.expression-value {
-  border-style: solid none;
-  border-color: #666;
-  border-width: 1px 0;
-}
+.expression-value .CodeMirror {}
 
 .CodeMirror, .CodeMirror-scroll {
   height: auto;
@@ -63,6 +67,9 @@ pre {margin: 0}
 /* Extensions to paraiso-dark */
 
 .evaluation-spinner {
+  padding: 0.5em 0;
+  display: block;
+  font-size: 14px;
   background: #2f1e2e;
   color: #b9b6b0;
 }

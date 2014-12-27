@@ -41,4 +41,4 @@
 
     om/IRenderState
     (render-state [_ _]
-      (dom/pre #js {:className "repl-expression"} nil))))
+      (dom/pre #js {:className ""} nil))))

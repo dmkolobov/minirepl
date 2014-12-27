@@ -39,6 +39,7 @@
         (dom/li #js {:className "repl-expression"
                      :key       line-number}
             (om/build print-expr-code code)
+            (dom/hr #js {:className "seam"})
             (om/build print-expr-value expression)))))
 
 (defn repl-printer [session owner]
