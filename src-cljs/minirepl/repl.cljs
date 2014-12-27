@@ -33,18 +33,15 @@
           (om/build spinner nil))))))
 
 (defn print-expression [params owner]
-  (let [[line-number item]           params
-        {:keys [e value evaled out]} item]
+  (let [[line-number expression]        params
+        {:keys [code value evaled out]} expression]
     (om/component
         (dom/li #js {:className "print-expression"
                      :key       line-number}
           (om/build print-expr-header line-number)
           (dom/div #js {:className "repl-expression"}
-            (om/build print-expr-code e)
-            (om/build print-expr-value
-                      {:value  value
-                       :out    out
-                       :evaled evaled}))))))
+            (om/build print-expr-code code)
+            (om/build print-expr-value expression))))))
 
 (defn repl-printer [session owner]
   (reify

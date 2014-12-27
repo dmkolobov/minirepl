@@ -55,8 +55,8 @@
         (set! user-session/*return* e)
         (println e)))))
 
-(defn new-expression [e]
-  {:e          e
+(defn new-expression [code]
+  {:code       code
    :out        ""
    :value      nil
    :evaled     false})
@@ -68,10 +68,10 @@
 
   [expression on-read]
 
-    (let [{:keys [e]} expression]
+    (let [{:keys [code]} expression]
       (POST "/repl"
           {:params  {:expression
-                       (str "(do (def *return* " e ")"
+                       (str "(do (def *return* " code ")"
                             "    (println *return*))")
                      :ns-identifier
                        'minirepl.user}
