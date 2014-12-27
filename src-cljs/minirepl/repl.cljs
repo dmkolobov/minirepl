@@ -14,52 +14,42 @@
 ;; Printing user expressions
 ;; =========================
 
-(defn print-expr-header [line-number]
-  (om/component
-    (dom/div #js {:className "expression-header"}
-             (str line-number " =>"))))
-
 (defn print-expr-code [expression owner]
   (om/component
-    (dom/div #js {:className "expression-text"}
-      (om/build editor/static-mirror expression))))
+    (dom/div #js {:className "expression-code"}
+      (om/build editor/mirror {:theme   "paraiso-dark"
+                               :content  expression
+                               :number   true
+                               :readonly true}))))
 
 (defn print-expr-value [val owner]
   (let [{:keys [value out evaled]} val]
     (om/component
       (dom/div #js {:className "expression-value"}
         (if evaled
-          (om/build editor/static-mirror out)
+          (om/build editor/mirror {:theme    "paraiso-dark"
+                                   :readonly true
+                                   :content  out})
           (om/build spinner nil))))))
 
 (defn print-expression [params owner]
   (let [[line-number expression]        params
         {:keys [code value evaled out]} expression]
     (om/component
-        (dom/li #js {:className "print-expression"
+        (dom/li #js {:className "repl-expression"
                      :key       line-number}
-          (om/build print-expr-header line-number)
-          (dom/div #js {:className "repl-expression"}
             (om/build print-expr-code code)
-            (om/build print-expr-value expression))))))
+            (om/build print-expr-value expression)))))
 
 (defn repl-printer [session owner]
-  (reify
-    om/IDidUpdate
-    (did-update [_ _ _]
-      (.colorize js/CodeMirror
-                 (.getElementsByClassName js/document "static-mirror")
-                 "clojure"))
-
-    om/IRender
-    (render [_]
+  (om/component
       (apply
         dom/ul #js {:className "repl-printer"}
         (om/build-all
           print-expression
           (map-indexed (fn [line-num item]
                          [line-num item])
-                       (:history session)))))))
+                       (:history session))))))
 
 ;; Reading user expressions
 ;; ========================
@@ -68,10 +58,11 @@
   (reify
     om/IRenderState
     (render-state [_ {:keys [source-chan]}]
-      (dom/div #js {:className "repl-reader print-expression"}
-        (om/build print-expr-header (count (:history session)))
+      (dom/div #js {:className "repl-reader"}
         (om/build editor/mirror
-                  {:theme  "paraiso-dark"}
+                  {:theme  "paraiso-dark"
+                   :number true
+                   :content ""}
                   {:init-state {:submit-chan source-chan}})))))
 
 

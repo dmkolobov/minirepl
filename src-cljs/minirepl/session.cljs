@@ -53,7 +53,11 @@
     (catch :default e
       (do
         (set! user-session/*return* e)
-        (println e)))))
+        (print (str e
+                      "\n"
+                      (.-fileName e)
+                      ":"
+                      (.-lineNumber e)))))))
 
 (defn new-expression [code]
   {:code       code
@@ -72,7 +76,7 @@
       (POST "/repl"
           {:params  {:expression
                        (str "(do (def *return* " code ")"
-                            "    (println *return*))")
+                            "    (print *return*))")
                      :ns-identifier
                        'minirepl.user}
            :handler (fn [compilation-response]
