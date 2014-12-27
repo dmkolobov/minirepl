@@ -23,6 +23,14 @@
                                :first-number (:line-number expression)
                                :readonly     true}))))
 
+(defn value-header [value]
+  (cond (instance? js/Error value)
+          "Error\n-----\n"
+        (instance? js/Function value)
+          "Function\n--------\n"
+        :else
+          ""))
+
 (defn print-expr-value [val owner]
   (let [{:keys [value out evaled]} val]
     (om/component
@@ -30,7 +38,8 @@
         (if evaled
           (om/build editor/mirror {:theme    "paraiso-dark"
                                    :readonly true
-                                   :content  out})
+                                   :content  (str (value-header value)
+                                                  out)})
           (om/build spinner nil))))))
 
 (defn print-expression [params owner]
