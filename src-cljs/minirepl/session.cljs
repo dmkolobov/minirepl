@@ -59,12 +59,13 @@
                       ":"
                       (.-lineNumber e)))))))
 
+(defn count-lines [text]
+  (count (.split text (js/RegExp. "\r\n|\r|\n"))))
+
 (defn last-line-number [history]
-  (let [last-expression (last history)]
-    (if last-expression (+ (count (.split (:code last-expression)
-                                          (js/RegExp. "\r\n|\r|\n")))
-                                  (:line-number last-expression))
-                        0)))
+  (if-let [{:keys [code line-number]} (last history)]
+    (+ (count-lines code) line-number)
+    0))
 
 (defn new-expression [code history]
   (let [line-number (last-line-number history)]
