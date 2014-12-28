@@ -45,6 +45,17 @@
 
 (defmulti print-value print-dispatch)
 
+(defn- print-value*
+  [opts owner]
+  (let [{:keys [content]} opts]
+    (reify
+      om/IRender
+      (render [_]
+      (om/build editor/mirror
+                {:theme    "paraiso-dark"
+                 :readonly true
+                 :content  content})))))
+
 (defmethod print-value :unevaluated
   [_]
   (om/component
@@ -68,10 +79,8 @@
       om/IRender
       (render [_]
         (dom/div #js {:className "expression-value"}
-                 (om/build editor/mirror
-                           {:theme    "paraiso-dark"
-                            :readonly true
-                            :content  (str "Procedure#" fname)}))))))
+                 (om/build print-value*
+                           {:content  (str "Procedure#" fname)}))))))
 
 (defmethod print-value js/String
   [expr]
@@ -80,10 +89,8 @@
       om/IRender
       (render [_]
         (dom/div #js {:className "expression-value"}
-                 (om/build editor/mirror
-                           {:theme    "paraiso-dark"
-                            :readonly true
-                            :content  (str "\"" s "\"")}))))))
+                 (om/build print-value*
+                           {:content  (str "\"" s "\"")}))))))
 
 (defmethod print-value :default
   [expr]
@@ -91,10 +98,8 @@
     om/IRender
     (render [_]
       (dom/div #js {:className "expression-value"}
-               (om/build editor/mirror
-                       {:theme    "paraiso-dark"
-                        :readonly true
-                        :content  (print-str (expr :value))})))))
+               (om/build print-value*
+                         {:content  (print-str (expr :value))})))))
 
 (defn print-expression [expression owner]
   (let [{:keys [code value evaled out]} expression]
