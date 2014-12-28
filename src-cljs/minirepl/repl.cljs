@@ -83,9 +83,8 @@
                         :readonly true
                         :content  (expr :out)})))))
 
-(defn print-expression [params owner]
-  (let [[index expression]        params
-        {:keys [code value evaled out]} expression]
+(defn print-expression [expression owner]
+  (let [{:keys [code value evaled out]} expression]
     (om/component
         (dom/li #js {:className "repl-expression"
                      :key       index}
@@ -97,11 +96,9 @@
   (om/component
       (apply
         dom/ul #js {:className "repl-printer"}
-        (om/build-all
-          print-expression
-          (map-indexed (fn [index item]
-                         [index item])
-                       (:history session))))))
+        (om/build-all print-expression
+                      (:history session)
+                      {:key :line-number}))))
 
 ;; Reading user expressions
 ;; ========================
@@ -110,7 +107,7 @@
   (reify
     om/IDidUpdate
     (did-update [_ _ _]
-                (om/refresh! owner))
+      (om/refresh! owner))
 
     om/IRenderState
     (render-state [_ {:keys [source-chan]}]
