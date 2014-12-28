@@ -53,12 +53,12 @@
 
 (defmethod print-value js/Error
   [expr]
-  (let [{:keys [out]} expr]
+  (let [{:keys [value]} expr]
     (reify
       om/IRender
       (render [_]
         (dom/div #js {:className "evaluation-error"}
-                 out)))))
+                 (print-str value))))))
 
 (defmethod print-value js/Function
   [expr]
@@ -94,7 +94,7 @@
                (om/build editor/mirror
                        {:theme    "paraiso-dark"
                         :readonly true
-                        :content  (expr :out)})))))
+                        :content  (print-str (expr :value))})))))
 
 (defn print-expression [expression owner]
   (let [{:keys [code value evaled out]} expression]
