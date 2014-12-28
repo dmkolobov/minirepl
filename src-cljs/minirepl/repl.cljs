@@ -6,15 +6,16 @@
             [om.dom :as dom :include-macros true]
             [cljs.core.async :as async :refer [chan put!]]))
 
-(defn spinner [_]
-  (om/component
-    (dom/div #js {:className "evaluation-spinner"}
-             (dom/div #js {:className "fa fa-spinner fa-spin"}))))
+;;;; Types
+;;;; =====
 
-;; Printing user expressions
-;; =========================
+(defn error? [v] (instance? js/Error v))
+(defn function? [v] (instance? js/Function v))
 
-(defn print-expr-code [expression owner]
+;;;; Printing user codes
+;;;; ===================
+
+(defn print-code [expression owner]
   (om/component
     (dom/div #js {:className "expression-code"}
       (om/build editor/mirror {:theme        "paraiso-dark"
@@ -23,36 +24,56 @@
                                :first-number (:line-number expression)
                                :readonly     true}))))
 
-;;;; Types
-;;;; =====
+;;;; Printing user values
+;;;; ====================
 
-(defn error? [v] (instance? js/Error v))
-(defn function? [v] (instance? js/Function v))
+(defn print-dispatch [expr _]
+  (let [{:keys [value evaled]} expr]
+    (cond (not evaled)      :unevaluated
+          (error? value)    js/Error
+          (function? value) js/Function
+          :else             :default)))
 
-(defn type-str [value]
-  (cond (error? value)    "js/Error"
-        (function? value) "js/Function"
-        (string? value)   "js/String"
-        (number? value)   "js/Number"
-        :else             (print-str (type (om/value value)))))
+(defmulti print-value print-dispatch)
 
-(defn value-header [v]
-  (let [s (type-str v)]
-    (str s
-         "\n"
-         (reduce str "" (repeat (count s) "-"))
-         "\n")))
+(defmethod print-value :unevaluated
+  [_]
+  (om/component
+    (dom/div #js {:className "evaluation-spinner"}
+             (dom/div #js {:className "fa fa-spinner fa-spin"}))))
 
-(defn print-expr-value [val owner]
-  (let [{:keys [value out evaled]} val]
-    (om/component
+(defmethod print-value js/Error
+  [expr]
+  (let [{:keys [out]} expr]
+    (reify
+      om/IRender
+      (render [_]
+        (dom/div #js {:className "evaluation-error"}
+                 out)))))
+
+(defmethod print-value js/Function
+  [expr]
+  (let [f (expr :value)
+        fname (if (.-name f) (.-name f) "anon")]
+    (reify
+      om/IRender
+      (render [_]
+        (dom/div #js {:className "expression-value"}
+                 (om/build editor/mirror
+                           {:theme    "paraiso-dark"
+                            :readonly true
+                            :content  (str "Procedure#" fname)}))))))
+
+(defmethod print-value :default
+  [expr]
+  (reify
+    om/IRender
+    (render [_]
       (dom/div #js {:className "expression-value"}
-        (if evaled
-          (om/build editor/mirror {:theme    "paraiso-dark"
-                                   :readonly true
-                                   :content  (str (value-header value)
-                                                  out)})
-          (om/build spinner nil))))))
+               (om/build editor/mirror
+                       {:theme    "paraiso-dark"
+                        :readonly true
+                        :content  (expr :out)})))))
 
 (defn print-expression [params owner]
   (let [[line-number expression]        params
@@ -60,9 +81,9 @@
     (om/component
         (dom/li #js {:className "repl-expression"
                      :key       line-number}
-            (om/build print-expr-code expression)
+            (om/build print-code expression)
             (dom/hr #js {:className "seam"})
-            (om/build print-expr-value expression)))))
+            (om/build print-value expression)))))
 
 (defn repl-printer [session owner]
   (om/component
@@ -93,7 +114,6 @@
                      :first-number line-number
                      :content      ""}
                     {:init-state {:submit-chan source-chan}}))))))
-
 
 ;; Updating repl component state
 ;; =============================

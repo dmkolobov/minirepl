@@ -68,10 +68,16 @@ pre {margin: 0}
 
 /* Extensions to paraiso-dark */
 
-.evaluation-spinner {
+.evaluation-spinner, .evaluation-error {
   padding: 0.5em 0 0.5em 35px;
   display: block;
   font-size: 14px;
   background: #2f1e2e;
   color: #b9b6b0;
+}
+
+.evaluation-error {
+  border-style: solid;
+  border-width: 2px;
+  border-color: red;
 }
