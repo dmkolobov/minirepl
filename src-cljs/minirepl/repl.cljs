@@ -12,10 +12,18 @@
 (defn error? [v] (instance? js/Error v))
 (defn function? [v] (instance? js/Function v))
 
+(defn function-name [f]
+  (let [name (.-name f)]
+    (if (> (count name) 0)
+      name
+      'anonymous)))
+
 ;;;; Printing user codes
 ;;;; ===================
 
-(defn print-code [expression owner]
+(defn print-code
+  "Component for displaying user expression codes."
+  [expression owner]
   (om/component
     (dom/div #js {:className "expression-code"}
       (om/build editor/mirror {:theme        "paraiso-dark"
@@ -54,7 +62,7 @@
 (defmethod print-value js/Function
   [expr]
   (let [f (expr :value)
-        fname (if (.-name f) (.-name f) "anon")]
+        fname (function-name f)]
     (reify
       om/IRender
       (render [_]
