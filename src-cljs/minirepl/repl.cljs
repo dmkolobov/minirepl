@@ -23,13 +23,25 @@
                                :first-number (:line-number expression)
                                :readonly     true}))))
 
-(defn value-header [value]
-  (cond (instance? js/Error value)
-          "Error\n-----\n"
-        (instance? js/Function value)
-          "Function\n--------\n"
-        :else
-          ""))
+;;;; Types
+;;;; =====
+
+(defn error? [v] (instance? js/Error v))
+(defn function? [v] (instance? js/Function v))
+
+(defn type-str [value]
+  (cond (error? value)    "js/Error"
+        (function? value) "js/Function"
+        (string? value)   "js/String"
+        (number? value)   "js/Number"
+        :else             (print-str (type (om/value value)))))
+
+(defn value-header [v]
+  (let [s (type-str v)]
+    (str s
+         "\n"
+         (reduce str "" (repeat (count s) "-"))
+         "\n")))
 
 (defn print-expr-value [val owner]
   (let [{:keys [value out evaled]} val]
@@ -88,7 +100,6 @@
 
 (defn process-input!
   "FIXME"
-
   [session code done]
   (let [history    (:history @session)
         expression (repl-session/new-expression code history)
@@ -98,7 +109,6 @@
 
 (defn process-response!
   "FIXME "
-
   [session compiler-response]
   (let [[line-number compiler-object] compiler-response
         session* (repl-session/eval! @session line-number compiler-object)]
