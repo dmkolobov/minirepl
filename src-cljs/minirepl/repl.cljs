@@ -40,6 +40,7 @@
     (cond (not evaled)      :unevaluated
           (error? value)    js/Error
           (function? value) js/Function
+          (string? value)   js/String
           :else             :default)))
 
 (defmulti print-value print-dispatch)
@@ -72,6 +73,18 @@
                             :readonly true
                             :content  (str "Procedure#" fname)}))))))
 
+(defmethod print-value js/String
+  [expr]
+  (let [s (expr :value)]
+    (reify
+      om/IRender
+      (render [_]
+        (dom/div #js {:className "expression-value"}
+                 (om/build editor/mirror
+                           {:theme    "paraiso-dark"
+                            :readonly true
+                            :content  (str "\"" s "\"")}))))))
+
 (defmethod print-value :default
   [expr]
   (reify
@@ -86,8 +99,7 @@
 (defn print-expression [expression owner]
   (let [{:keys [code value evaled out]} expression]
     (om/component
-        (dom/li #js {:className "repl-expression"
-                     :key       index}
+        (dom/li #js {:className "repl-expression"}
             (om/build print-code expression)
             (dom/hr #js {:className "seam"})
             (om/build print-value expression)))))
