@@ -84,11 +84,11 @@
                         :content  (expr :out)})))))
 
 (defn print-expression [params owner]
-  (let [[line-number expression]        params
+  (let [[index expression]        params
         {:keys [code value evaled out]} expression]
     (om/component
         (dom/li #js {:className "repl-expression"
-                     :key       line-number}
+                     :key       index}
             (om/build print-code expression)
             (dom/hr #js {:className "seam"})
             (om/build print-value expression)))))
@@ -99,8 +99,8 @@
         dom/ul #js {:className "repl-printer"}
         (om/build-all
           print-expression
-          (map-indexed (fn [line-num item]
-                         [line-num item])
+          (map-indexed (fn [index item]
+                         [index item])
                        (:history session))))))
 
 ;; Reading user expressions
