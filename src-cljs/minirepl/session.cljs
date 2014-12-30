@@ -5,6 +5,9 @@
 
 (enable-console-print!)
 
+(def *return* nil)
+(def *out* nil)
+
 ;; the 1th element is the most recent value
 (defn nth-last-value [session line-number n]
   (let [idx           (- line-number n)]
@@ -33,7 +36,7 @@
               cljs.core/*print-readably* true
               cljs.core/*print-fn*
                 (fn [s]
-                  (set! user-session/*out* (str user-session/*out* s)))]
+                  (set! minirepl.session/*out* (str minirepl.session/*out* s)))]
       (f))))
 
 (defn create!
@@ -51,7 +54,7 @@
   (try
     (js/eval compiled-js)
     (catch :default e
-      (set! user-session/*return* e))))
+      (set! *return* e))))
 
 (defn count-lines [text]
   (count (.split text (js/RegExp. "\r\n|\r|\n"))))
@@ -79,7 +82,7 @@
     (let [{:keys [code]} expression]
       (POST "/repl"
           {:params  {:expression
-                       (str "(set! *return* " code ")")
+                       (str "(set! minirepl.session/*return* " code ")")
                      :ns-identifier
                        'minirepl.user}
            :handler (fn [compilation-response]
@@ -100,17 +103,22 @@
                        :out    compiler-error
                        :evaled true))))
 
+(defn session-state []
+  [*return* *out*])
+
+(defn clear-session-state! []
+  (set! *return* nil)
+  (set! *out* nil))
+
 (defmethod eval! :compiled-js
   [session line-number compiler-object]
 
   (let [compiled-js (:compiled-js compiler-object)]
     (within session line-number #(execjs! compiled-js))
-    (let [value user-session/*return*
-          e-out user-session/*out*]
-      (set! user-session/*return* nil)
-      (set! user-session/*out* "")
+    (let [[value out] (session-state)]
+      (clear-session-state!)
       (update-in session
                  [:history line-number]
                  #(assoc % :value  value
-                           :out    e-out
+                           :out    out
                            :evaled true)))))
