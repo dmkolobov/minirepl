@@ -5,7 +5,7 @@
             [om.dom :as dom :include-macros true]))
 
 (def current-session
-  (atom (repl-session/create!)))
+  (atom (repl-session/create-session)))
 
 (om/root
   repl/repl-component

@@ -8,12 +8,14 @@
 (def *return* nil)
 (def *out* nil)
 
-;; the 1th element is the most recent value
-(defn nth-last-value [session line-number n]
-  (let [idx           (- line-number n)]
-    (if (and (>= idx 0)
-             (< idx line-number))
-      (get-in session [:history idx :value])
+(defn nth-last-value
+  "Helper function for getting nth most recently executed
+  expression value."
+  [session current-index n]
+  (let [index           (- current-index n)]
+    (if (and (>= index 0)
+             (< index current-index))
+      (get-in session [:history index :value])
       nil)))
 
 (defn within
@@ -39,7 +41,7 @@
                   (set! minirepl.session/*out* (str minirepl.session/*out* s)))]
       (f))))
 
-(defn create!
+(defn create-session
   "Creates a hash representing the repl state."
 
   []
