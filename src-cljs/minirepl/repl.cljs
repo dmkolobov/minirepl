@@ -186,9 +186,15 @@
 ;; Updating repl component state
 ;; =============================
 
+(defn- set-expr-value!
+  [session index value]
+  (om/transact! session
+                [:history index :value]
+                (constantly value)))
+
 (defn wrap-code
   "Wrap user expression code in a set! call for capturing its value in the
-  dynamic *return* var."
+   dynamic *return* var."
   [code]
   (str "(set! minirepl.repl/*return* " code ")"))
 
@@ -214,15 +220,14 @@
 
 (defmethod eval! :compiler-error
   [session index compiler-object]
-  (let [compiler-error (:compiler-error compiler-object)]
-   (om/transact! session [:history index :value] (constantly compiler-error))))
+  (set-expr-value! session index (:compiler-error compiler-object)))
 
 (defmethod eval! :compiled-js
   [session index compiler-object]
   (within session index #(execjs! (:compiled-js compiler-object)))
   (let [[value]     (session-state)]
     (clear-session-state!)
-    (om/transact! session [:history index :value] (constantly value))))
+    (set-expr-value! session index value)))
 
 
 ;; Main component
