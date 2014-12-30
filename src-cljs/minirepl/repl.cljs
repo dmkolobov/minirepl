@@ -96,7 +96,6 @@
 
 (defn- print-dispatch [expr _]
   (let [{:keys [value evaled?]} expr]
-    ;; BUG: returning nil values from a user expression causes infinite spin.
     (cond (not evaled?) :unevaluated
           (error? value)                  js/Error
           (function? value)               js/Function
