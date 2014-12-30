@@ -52,12 +52,7 @@
     (js/eval compiled-js)
     (catch :default e
       (do
-        (set! user-session/*return* e)
-        (print (str e
-                      "\n"
-                      (.-fileName e)
-                      ":"
-                      (.-lineNumber e)))))))
+        (set! user-session/*return* e)))))
 
 (defn count-lines [text]
   (count (.split text (js/RegExp. "\r\n|\r|\n"))))
@@ -85,8 +80,7 @@
     (let [{:keys [code]} expression]
       (POST "/repl"
           {:params  {:expression
-                       (str "(do (def *return* " code ")"
-                            "    (print *return*))")
+                       (str "(do (def *return* " code "))")
                      :ns-identifier
                        'minirepl.user}
            :handler (fn [compilation-response]
