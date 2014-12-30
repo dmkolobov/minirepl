@@ -60,8 +60,7 @@
   (let [line-number (line-count session)]
     {:code        code
      :out         ""
-     :value       nil
-     :evaled      false
+     :value       js/undefined
      :line-number line-number}))
 
 ;;;; Types
@@ -99,10 +98,10 @@
 
 (defn- print-dispatch [expr _]
   (let [{:keys [value evaled]} expr]
-    (cond (not evaled)      :unevaluated
-          (error? value)    js/Error
-          (function? value) js/Function
-          :else             :default)))
+    (cond (== value js/undefined) :unevaluated
+          (error? value)          js/Error
+          (function? value)       js/Function
+          :else                   :default)))
 
 (defmulti print-value print-dispatch)
 
@@ -153,7 +152,7 @@
                          {:content  (print-cursor (expr :value))})))))
 
 (defn- print-expression [expression owner]
-  (let [{:keys [code value evaled out]} expression]
+  (let [{:keys [code value]} expression]
     (om/component
         (dom/li #js {:className "repl-expression"}
             (om/build print-code expression)
@@ -218,8 +217,7 @@
   (let [compiler-error (:compiler-error compiler-object)]
    (update-in session
              [:history index]
-             #(assoc % :value  compiler-error
-                       :evaled true))))
+             #(assoc % :value  compiler-error))))
 
 (defmethod eval! :compiled-js
   [session index compiler-object]
@@ -229,9 +227,7 @@
       (clear-session-state!)
       (update-in session
                  [:history index]
-                 #(assoc % :value  value
-                           :out    out
-                           :evaled true)))))
+                 #(assoc % :value  value)))))
 
 (defn- process-input!
   "FIXME"
