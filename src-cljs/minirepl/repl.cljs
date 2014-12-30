@@ -21,27 +21,9 @@
 (defn clear-session-state! []
   (set! *return* nil))
 
-(defn within
-  "Invoke the function f with the dynamic bindings established by
-   the session context."
-  [session line-number f]
-  (let [rhistory  (reverse (:history session))
-        nth-value (comp (fn [expr _] (:value expr)) util/nth-or-nil)]
-    (binding [user-session/*one   (nth-value rhistory 1)
-              user-session/*two   (nth-value rhistory 2)
-              user-session/*three (nth-value rhistory 3)]
-      (f))))
-
 (defn create-session
   "Creates a hash representing the repl state."
   [] {:history []})
-
-(defn execjs!
-  "Evaluate compiled user expression in a try-catch block.
-   On error, set the *return* to the caught error instance."
-  [compiled-js]
-  (try (js/eval compiled-js)
-       (catch :default e (set! *return* e))))
 
 (defn line-count
   "Count the number of lines typed in the current session."
@@ -55,6 +37,27 @@
    :out         ""
    :value       js/undefined
    :line-number line-number})
+
+;;;; JavaScript Execution
+;;;; ====================
+
+(defn within
+  "Invoke the function f with the dynamic bindings established by
+   the session context."
+  [session line-number f]
+  (let [rhistory  (reverse (:history session))
+        nth-value (comp (fn [expr _] (:value expr)) util/nth-or-nil)]
+    (binding [user-session/*one   (nth-value rhistory 1)
+              user-session/*two   (nth-value rhistory 2)
+              user-session/*three (nth-value rhistory 3)]
+      (f))))
+
+(defn execjs!
+  "Evaluate compiled user expression in a try-catch block.
+   On error, set the *return* to the caught error instance."
+  [compiled-js]
+  (try (js/eval compiled-js)
+       (catch :default e (set! *return* e))))
 
 ;;;; Types
 ;;;; =====
