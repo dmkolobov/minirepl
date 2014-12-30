@@ -44,15 +44,10 @@
   (try (js/eval compiled-js)
        (catch :default e (set! *return* e))))
 
-(defn count-lines
-  "Count the number of lines in a piece of text."
-  [text]
-  (count (.split text (js/RegExp. "\r\n|\r|\n"))))
-
 (defn line-count
   "Count the number of lines typed in the current session."
   [session]
-  (reduce #(+ %1 (count-lines (:code %2)))
+  (reduce #(+ %1 (util/count-lines (:code %2)))
           0
           (:history session)))
 
