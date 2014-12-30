@@ -1,5 +1,5 @@
 (ns minirepl.core
-  (:require [minirepl.repl :as repl]
+  (:require [minirepl.repl :as minirepl]
             [minirepl.session :as repl-session]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]))
@@ -8,7 +8,7 @@
   (atom (repl-session/create-session)))
 
 (om/root
-  repl/repl-component
+  minirepl/repl
   current-session
   {:target (. js/document (getElementById "app"))})
 

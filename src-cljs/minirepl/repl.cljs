@@ -9,10 +9,10 @@
 ;;;; Types
 ;;;; =====
 
-(defn error? [v] (instance? js/Error v))
-(defn function? [v] (instance? js/Function v))
+(defn- error? [v] (instance? js/Error v))
+(defn- function? [v] (instance? js/Function v))
 
-(defn function-name [f]
+(defn- function-name [f]
   (let [name (.-name f)]
     (if (seq name)
       name
@@ -21,7 +21,7 @@
 ;;;; Printing user codes
 ;;;; ===================
 
-(defn print-code
+(defn- print-code
   "Component for displaying user expression codes."
   [expression owner]
   (om/component
@@ -35,11 +35,11 @@
 ;;;; Printing user values
 ;;;; ====================
 
-(defn print-cursor [cursor]
+(defn- print-cursor [cursor]
   (binding [*print-readably*]
     (pr-str (om/value cursor))))
 
-(defn print-dispatch [expr _]
+(defn- print-dispatch [expr _]
   (let [{:keys [value evaled]} expr]
     (cond (not evaled)      :unevaluated
           (error? value)    js/Error
@@ -94,7 +94,7 @@
                (om/build print-value*
                          {:content  (print-cursor (expr :value))})))))
 
-(defn print-expression [expression owner]
+(defn- print-expression [expression owner]
   (let [{:keys [code value evaled out]} expression]
     (om/component
         (dom/li #js {:className "repl-expression"}
@@ -102,7 +102,7 @@
             (dom/hr #js {:className "seam"})
             (om/build print-value expression)))))
 
-(defn repl-printer [session owner]
+(defn- repl-printer [session owner]
   (om/component
       (apply
         dom/ul #js {:className "repl-printer"}
@@ -113,7 +113,7 @@
 ;; Reading user expressions
 ;; ========================
 
-(defn repl-reader [session owner]
+(defn- repl-reader [session owner]
   (reify
     om/IDidUpdate
     (did-update [_ _ _]
@@ -133,7 +133,7 @@
 ;; Updating repl component state
 ;; =============================
 
-(defn process-input!
+(defn- process-input!
   "FIXME"
   [session code done]
   (let [history    (:history @session)
@@ -142,7 +142,7 @@
     (repl-session/read! expression #(done [index %]))
     (om/transact! session :history #(conj % expression))))
 
-(defn process-response!
+(defn- process-response!
   "FIXME "
   [session compiler-response]
   (let [[line-number compiler-object] compiler-response
@@ -152,7 +152,7 @@
 ;; Main component
 ;; ==============
 
-(defn repl-component [session owner]
+(defn repl [session owner]
   (reify
     om/IInitState
     (init-state [_]

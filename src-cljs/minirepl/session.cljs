@@ -8,34 +8,29 @@
 (def *return* nil)
 (def *out* nil)
 
-(defn nth-last-value
-  "Helper function for getting nth most recently executed
-  expression value."
-  [session n]
-  (let [current-index (count (:history session))
-        index         (- current-index (inc n))]
-    (if (and (>= index 0)
-             (< index current-index))
-      (get-in session [:history index :value])
-      nil)))
+(defn session-state []
+  [*return* *out*])
+
+(defn clear-session-state! []
+  (set! *return* nil)
+  (set! *out* nil))
+
+(defn- nth-or-nil [coll n]
+  (if (< (count coll) (inc n))
+    nil
+    (nth coll n)))
 
 (defn within
   "Invoke the function f with the dynamic bindings established by
    the session context."
   [session line-number f]
-  (let [{:keys [value-history]} session]
-    (binding [user-session/*one
-              (nth-last-value session 1)
-
-              user-session/*two
-              (nth-last-value session 2)
-
-              user-session/*three
-              (nth-last-value session 3)
-
+  (let [rhistory  (reverse (:history session))
+        nth-value (comp :value )]
+    (binding [user-session/*one          (nth-value rhistory 1)
+              user-session/*two          (nth-value rhistory 2)
+              user-session/*three        (nth-value rhistory 3)
               cljs.core/*print-newline*  true
               cljs.core/*print-readably* true
-
               cljs.core/*print-fn*
                 (fn [s]
                   (set! minirepl.session/*out* (str minirepl.session/*out* s)))]
@@ -97,15 +92,7 @@
    (update-in session
              [:history line-number]
              #(assoc % :value  compiler-error
-                       :out    compiler-error
                        :evaled true))))
-
-(defn session-state []
-  [*return* *out*])
-
-(defn clear-session-state! []
-  (set! *return* nil)
-  (set! *out* nil))
 
 (defmethod eval! :compiled-js
   [session line-number compiler-object]
