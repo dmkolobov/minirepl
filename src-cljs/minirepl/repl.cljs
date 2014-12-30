@@ -224,12 +224,6 @@
     (clear-session-state!)
     (om/transact! session [:history index :value] (constantly value))))
 
-(defn- process-response!
-  "FIXME "
-  [session compiler-response]
-  (let [[index compiler-object] compiler-response
-        session* (eval! @session index compiler-object)]
-    (om/transact! session (constantly session*))))
 
 ;; Main component
 ;; ==============
