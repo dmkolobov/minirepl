@@ -1,10 +1,68 @@
 (ns minirepl.repl
-  (:require [minirepl.util :as util]
-            [minirepl.session :as repl-session]
+  (:require [cljs.core]
+            [minirepl.util :as util]
             [minirepl.editor :as editor]
+            [minirepl.user :as user-session]
+            [ajax.core :refer [POST]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.async :as async :refer [chan put!]]))
+
+
+;;;; Sessions
+;;;; ========
+
+(def *return*
+  "Used for holding the values of evaluated user expressions."
+  nil)
+
+(defn session-state []
+  [*return*])
+
+(defn clear-session-state! []
+  (set! *return* nil))
+
+(defn within
+  "Invoke the function f with the dynamic bindings established by
+   the session context."
+  [session line-number f]
+  (let [rhistory  (reverse (:history session))
+        nth-value (comp (fn [expr _] (:value expr)) util/nth-or-nil)]
+    (binding [user-session/*one   (nth-value rhistory 1)
+              user-session/*two   (nth-value rhistory 2)
+              user-session/*three (nth-value rhistory 3)]
+      (f))))
+
+(defn create-session
+  "Creates a hash representing the repl state."
+  [] {:history []})
+
+(defn execjs!
+  "Evaluate compiled user expression in a try-catch block.
+   On error, set the *return* to the caught error instance."
+  [compiled-js]
+  (try (js/eval compiled-js)
+       (catch :default e (set! *return* e))))
+
+(defn count-lines
+  "Count the number of lines in a piece of text."
+  [text]
+  (count (.split text (js/RegExp. "\r\n|\r|\n"))))
+
+(defn line-count
+  "Count the number of lines typed in the current session."
+  [session]
+  (reduce #(+ %1 (count-lines (:code %2)))
+          0
+          (:history session)))
+
+(defn new-expression [code session]
+  (let [line-number (line-count session)]
+    {:code        code
+     :out         ""
+     :value       nil
+     :evaled      false
+     :line-number line-number}))
 
 ;;;; Types
 ;;;; =====
@@ -121,7 +179,7 @@
 
     om/IRenderState
     (render-state [_ {:keys [source-chan]}]
-      (let [line-number (repl-session/line-count session)]
+      (let [line-number (line-count session)]
         (dom/div #js {:className "repl-reader"}
           (om/build editor/mirror
                     {:theme        "paraiso-dark"
@@ -133,20 +191,62 @@
 ;; Updating repl component state
 ;; =============================
 
+(defn read!
+  "Sends an asynchronous request to compile a user expression.
+   Calls 'on-read' when the response is received."
+
+  [expression on-read]
+
+    (let [{:keys [code]} expression]
+      (POST "/repl"
+          {:params  {:expression
+                       (str "(set! minirepl.repl/*return* " code ")")
+                     :ns-identifier
+                       'minirepl.user}
+           :handler (fn [compilation-response]
+                      (on-read compilation-response))})))
+
+(defmulti eval!
+  "Evaluated the compiled user expression. If there is a compilation error,
+   the value of the expression is the compilation error object."
+  (fn [_ _ compiler-object]
+    (cond (contains? compiler-object :compiled-js) :compiled-js
+          (contains? compiler-object :compiler-error) :compiler-error)))
+
+(defmethod eval! :compiler-error
+  [session index compiler-object]
+  (let [compiler-error (:compiler-error compiler-object)]
+   (update-in session
+             [:history index]
+             #(assoc % :value  compiler-error
+                       :evaled true))))
+
+(defmethod eval! :compiled-js
+  [session index compiler-object]
+  (let [compiled-js (:compiled-js compiler-object)]
+    (within session index #(execjs! compiled-js))
+    (let [[value] (session-state)]
+      (clear-session-state!)
+      (update-in session
+                 [:history index]
+                 #(assoc % :value  value
+                           :out    out
+                           :evaled true)))))
+
 (defn- process-input!
   "FIXME"
   [session code done]
   (let [history    (:history @session)
-        expression (repl-session/new-expression code @session)
+        expression (new-expression code @session)
         index      (count history)]
-    (repl-session/read! expression #(done [index %]))
+    (read! expression #(done [index %]))
     (om/transact! session :history #(conj % expression))))
 
 (defn- process-response!
   "FIXME "
   [session compiler-response]
   (let [[line-number compiler-object] compiler-response
-        session* (repl-session/eval! @session line-number compiler-object)]
+        session* (eval! @session line-number compiler-object)]
     (om/transact! session (constantly session*))))
 
 ;; Main component
