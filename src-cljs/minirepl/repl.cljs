@@ -8,7 +8,6 @@
             [om.dom :as dom :include-macros true]
             [cljs.core.async :as async :refer [chan put!]]))
 
-
 ;;;; Sessions
 ;;;; ========
 
@@ -51,12 +50,11 @@
           0
           (:history session)))
 
-(defn new-expression [code session]
-  (let [line-number (line-count session)]
-    {:code        code
-     :out         ""
-     :value       js/undefined
-     :line-number line-number}))
+(defn new-expression [code line-number]
+  {:code        code
+   :out         ""
+   :value       js/undefined
+   :line-number line-number})
 
 ;;;; Types
 ;;;; =====
@@ -185,20 +183,24 @@
 ;; Updating repl component state
 ;; =============================
 
+(defn wrap-code
+  "Wrap user expression code in a set! call for capturing its value in the
+  dynamic *return* var."
+  [code]
+  (str "(set! minirepl.repl/*return* " code ")"))
+
 (defn read!
   "Sends an asynchronous request to compile a user expression.
    Calls 'on-read' when the response is received."
-
-  [expression on-read]
-
-    (let [{:keys [code]} expression]
+  [session code compiler-chan]
+    (let [index       (count (:history @session))
+          line-number (line-count @session)
+          expression  (new-expression code line-number)]
       (POST "/repl"
-          {:params  {:expression
-                       (str "(set! minirepl.repl/*return* " code ")")
-                     :ns-identifier
-                       'minirepl.user}
-           :handler (fn [compilation-response]
-                      (on-read compilation-response))})))
+            {:params  {:expression    (wrap-code code)
+                       :ns-identifier 'minirepl.user}
+             :handler #(put! compiler-chan [index %])})
+      (om/transact! session :history #(conj % expression))))
 
 (defmulti eval!
   "Evaluated the compiled user expression. If there is a compilation error,
@@ -210,34 +212,20 @@
 (defmethod eval! :compiler-error
   [session index compiler-object]
   (let [compiler-error (:compiler-error compiler-object)]
-   (update-in session
-             [:history index]
-             #(assoc % :value  compiler-error))))
+   (om/transact! session [:history index :value] (constantly compiler-error))))
 
 (defmethod eval! :compiled-js
   [session index compiler-object]
-  (let [compiled-js (:compiled-js compiler-object)]
-    (within session index #(execjs! compiled-js))
-    (let [[value] (session-state)]
-      (clear-session-state!)
-      (update-in session
-                 [:history index]
-                 #(assoc % :value  value)))))
-
-(defn- process-input!
-  "FIXME"
-  [session code done]
-  (let [history    (:history @session)
-        expression (new-expression code @session)
-        index      (count history)]
-    (read! expression #(done [index %]))
-    (om/transact! session :history #(conj % expression))))
+  (within session index #(execjs! (:compiled-js compiler-object)))
+  (let [[value]     (session-state)]
+    (clear-session-state!)
+    (om/transact! session [:history index :value] (constantly value))))
 
 (defn- process-response!
   "FIXME "
   [session compiler-response]
-  (let [[line-number compiler-object] compiler-response
-        session* (eval! @session line-number compiler-object)]
+  (let [[index compiler-object] compiler-response
+        session* (eval! @session index compiler-object)]
     (om/transact! session (constantly session*))))
 
 ;; Main component
@@ -255,11 +243,12 @@
       (let [{:keys [source-chan compiler-chan]} (om/get-state owner)]
         (util/consume-channel
           (fn [code]
-            (process-input! session code #(put! compiler-chan %)))
+            (read! session code compiler-chan))
           source-chan)
         (util/consume-channel
           (fn [compiler-response]
-            (process-response! session compiler-response))
+            (let [[index compiler-object] compiler-response]
+              (eval! session index compiler-object)))
           compiler-chan)))
 
     om/IRenderState
