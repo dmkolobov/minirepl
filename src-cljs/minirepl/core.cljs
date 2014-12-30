@@ -1,11 +1,10 @@
 (ns minirepl.core
   (:require [minirepl.repl :as minirepl]
-            [minirepl.session :as repl-session]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]))
 
 (def current-session
-  (atom (repl-session/create-session)))
+  (atom (minirepl/create-session)))
 
 (om/root
   minirepl/repl

@@ -28,7 +28,8 @@
 (defn line-count
   "Count the number of lines typed in the current session."
   [session]
-  (reduce #(+ %1 (util/count-lines (:code %2)))
+  (reduce (fn [total expr]
+            (+ total (util/count-lines (:code expr))))
           0
           (:history session)))
 
@@ -94,10 +95,11 @@
 
 (defn- print-dispatch [expr _]
   (let [{:keys [value evaled]} expr]
-    (cond (== value js/undefined) :unevaluated
-          (error? value)          js/Error
-          (function? value)       js/Function
-          :else                   :default)))
+    ;; BUG: returning nil values from a user expression causes infinite spin.
+    (cond (identical? value undefined) :unevaluated
+          (error? value)                  js/Error
+          (function? value)               js/Function
+          :else                           :default)))
 
 (defmulti print-value print-dispatch)
 
