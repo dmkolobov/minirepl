@@ -121,7 +121,7 @@
 
     om/IRenderState
     (render-state [_ {:keys [source-chan]}]
-      (let [line-number (repl-session/total-lines session)]
+      (let [line-number (repl-session/line-count session)]
         (dom/div #js {:className "repl-reader"}
           (om/build editor/mirror
                     {:theme        "paraiso-dark"

@@ -5,8 +5,9 @@
 
 (enable-console-print!)
 
-(def *return* nil)
-(def *out* nil)
+(def *return*
+  "Used for holding the values of evaluated user expressions."
+  nil)
 
 (defn session-state []
   [*return* *out*])
@@ -15,7 +16,9 @@
   (set! *return* nil)
   (set! *out* nil))
 
-(defn- nth-or-nil [coll n]
+(defn- nth-or-nil
+  "Return the nth item in 'coll', or nil if 'coll' is too short."
+  [coll n]
   (if (< (count coll) (inc n))
     nil
     (nth coll n)))
@@ -25,15 +28,10 @@
    the session context."
   [session line-number f]
   (let [rhistory  (reverse (:history session))
-        nth-value (comp :value )]
-    (binding [user-session/*one          (nth-value rhistory 1)
-              user-session/*two          (nth-value rhistory 2)
-              user-session/*three        (nth-value rhistory 3)
-              cljs.core/*print-newline*  true
-              cljs.core/*print-readably* true
-              cljs.core/*print-fn*
-                (fn [s]
-                  (set! minirepl.session/*out* (str minirepl.session/*out* s)))]
+        nth-value (comp (fn [expr _] (:value expr)) nth-or-nil)]
+    (binding [user-session/*one   (nth-value rhistory 1)
+              user-session/*two   (nth-value rhistory 2)
+              user-session/*three (nth-value rhistory 3)]
       (f))))
 
 (defn create-session
@@ -41,23 +39,26 @@
   [] {:history []})
 
 (defn execjs!
-  "Evaluate in a try-catch block. This allows us display
-   errors to the user."
+  "Evaluate compiled user expression in a try-catch block.
+   On error, set the *return* to the caught error instance."
   [compiled-js]
-  (try
-    (js/eval compiled-js)
-    (catch :default e (set! *return* e))))
+  (try (js/eval compiled-js)
+       (catch :default e (set! *return* e))))
 
-(defn count-lines [text]
+(defn count-lines
+  "Count the number of lines in a piece of text."
+  [text]
   (count (.split text (js/RegExp. "\r\n|\r|\n"))))
 
-(defn total-lines [session]
+(defn line-count
+  "Count the number of lines typed in the current session."
+  [session]
   (reduce #(+ %1 (count-lines (:code %2)))
           0
           (:history session)))
 
 (defn new-expression [code session]
-  (let [line-number (total-lines session)]
+  (let [line-number (line-count session)]
     {:code        code
      :out         ""
      :value       nil
@@ -65,9 +66,8 @@
      :line-number line-number}))
 
 (defn read!
-  "Sends an asynchronous request to compile the
-   ClojureScript expression expression to Javascript. Will call
-   on-read when the server responds, with the compiled JS."
+  "Sends an asynchronous request to compile a user expression.
+   Calls 'on-read' when the response is received."
 
   [expression on-read]
 
@@ -81,13 +81,14 @@
                       (on-read compilation-response))})))
 
 (defmulti eval!
+  "Evaluated the compiled user expression. If there is a compilation error,
+   the value of the expression is the compilation error object."
   (fn [_ _ compiler-object]
     (cond (contains? compiler-object :compiled-js) :compiled-js
           (contains? compiler-object :compiler-error) :compiler-error)))
 
 (defmethod eval! :compiler-error
   [session line-number compiler-object]
-
   (let [compiler-error (:compiler-error compiler-object)]
    (update-in session
              [:history line-number]
@@ -96,7 +97,6 @@
 
 (defmethod eval! :compiled-js
   [session line-number compiler-object]
-
   (let [compiled-js (:compiled-js compiler-object)]
     (within session line-number #(execjs! compiled-js))
     (let [[value out] (session-state)]
