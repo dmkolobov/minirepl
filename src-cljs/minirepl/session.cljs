@@ -11,8 +11,9 @@
 (defn nth-last-value
   "Helper function for getting nth most recently executed
   expression value."
-  [session current-index n]
-  (let [index           (- current-index n)]
+  [session n]
+  (let [current-index (count (:history session))
+        index         (- current-index (inc n))]
     (if (and (>= index 0)
              (< index current-index))
       (get-in session [:history index :value])
@@ -21,21 +22,20 @@
 (defn within
   "Invoke the function f with the dynamic bindings established by
    the session context."
-
   [session line-number f]
-
   (let [{:keys [value-history]} session]
-    (binding [user-session/*one   (nth-last-value session
-                                                  line-number
-                                                  1)
-              user-session/*two   (nth-last-value session
-                                                  line-number
-                                                  2)
-              user-session/*three (nth-last-value session
-                                                  line-number
-                                                  3)
+    (binding [user-session/*one
+              (nth-last-value session 1)
+
+              user-session/*two
+              (nth-last-value session 2)
+
+              user-session/*three
+              (nth-last-value session 3)
+
               cljs.core/*print-newline*  true
               cljs.core/*print-readably* true
+
               cljs.core/*print-fn*
                 (fn [s]
                   (set! minirepl.session/*out* (str minirepl.session/*out* s)))]
@@ -43,31 +43,26 @@
 
 (defn create-session
   "Creates a hash representing the repl state."
-
-  []
-  {:history []})
+  [] {:history []})
 
 (defn execjs!
   "Evaluate in a try-catch block. This allows us display
    errors to the user."
-
   [compiled-js]
-
   (try
     (js/eval compiled-js)
-    (catch :default e
-      (set! *return* e))))
+    (catch :default e (set! *return* e))))
 
 (defn count-lines [text]
   (count (.split text (js/RegExp. "\r\n|\r|\n"))))
 
-(defn last-line-number [history]
-  (if-let [{:keys [code line-number]} (last history)]
-    (+ (count-lines code) line-number)
-    0))
+(defn total-lines [session]
+  (reduce #(+ %1 (count-lines (:code %2)))
+          0
+          (:history session)))
 
-(defn new-expression [code history]
-  (let [line-number (last-line-number history)]
+(defn new-expression [code session]
+  (let [line-number (total-lines session)]
     {:code        code
      :out         ""
      :value       nil

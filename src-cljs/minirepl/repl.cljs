@@ -121,7 +121,7 @@
 
     om/IRenderState
     (render-state [_ {:keys [source-chan]}]
-      (let [line-number (repl-session/last-line-number (:history session))]
+      (let [line-number (repl-session/total-lines session)]
         (dom/div #js {:className "repl-reader"}
           (om/build editor/mirror
                     {:theme        "paraiso-dark"
@@ -137,7 +137,7 @@
   "FIXME"
   [session code done]
   (let [history    (:history @session)
-        expression (repl-session/new-expression code history)
+        expression (repl-session/new-expression code @session)
         index      (count history)]
     (repl-session/read! expression #(done [index %]))
     (om/transact! session :history #(conj % expression))))
