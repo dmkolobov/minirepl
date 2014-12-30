@@ -34,9 +34,10 @@
           (:history session)))
 
 (defn new-expression [code line-number]
-  {:code        code
+  {:evaled?     false
+   :code        code
    :out         ""
-   :value       js/undefined
+   :value       nil
    :line-number line-number})
 
 ;;;; JavaScript Execution
@@ -94,9 +95,9 @@
     (pr-str (om/value cursor))))
 
 (defn- print-dispatch [expr _]
-  (let [{:keys [value evaled]} expr]
+  (let [{:keys [value evaled?]} expr]
     ;; BUG: returning nil values from a user expression causes infinite spin.
-    (cond (identical? value undefined) :unevaluated
+    (cond (not evaled?) :unevaluated
           (error? value)                  js/Error
           (function? value)               js/Function
           :else                           :default)))
@@ -191,8 +192,9 @@
 (defn- set-expr-value!
   [session index value]
   (om/transact! session
-                [:history index :value]
-                (constantly value)))
+                [:history index]
+                (fn [expr]
+                  (assoc expr :evaled? true :value value))))
 
 (defn wrap-code
   "Wrap user expression code in a set! call for capturing its value in the
