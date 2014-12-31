@@ -35,6 +35,8 @@
     om/IInitState
     (init-state [_] {})
 
+    ;; BUG: This change causes incorrect line numbers in the reader.
+    ;;      This is may or may not be the place to fix it.
     om/IWillUpdate
     (will-update [_ next-props _]
       (let [cm (om/get-state owner :cm)
