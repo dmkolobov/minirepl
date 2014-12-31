@@ -11,15 +11,22 @@
 ;;;; Sessions
 ;;;; ========
 
-(def *return*
+(def *value*
   "Used for holding the values of evaluated user expressions."
   nil)
 
-(defn session-state []
-  [*return*])
+(def *value-str*
+  "Use for holding the printed value of user expressions."
+  "")
 
-(defn clear-session-state! []
-  (set! *return* nil))
+(def *out*
+  "Used for holding the result of printing."
+  "")
+
+(defn clear-eval-state! []
+  (set! *value* nil)
+  (set! *value-str* "")
+  (set! *out* ""))
 
 (defn create-session
   "Creates a hash representing the repl state."
@@ -59,7 +66,7 @@
    On error, set the *return* to the caught error instance."
   [compiled-js]
   (try (js/eval compiled-js)
-       (catch :default e (set! *return* e))))
+       (catch :default e (set! *value* e))))
 
 ;;;; Types
 ;;;; =====
@@ -90,19 +97,12 @@
 ;;;; Printing user values
 ;;;; ====================
 
-(defn- print-cursor [cursor]
-  (binding [*print-readably*]
-    (pr-str (om/value cursor))))
-
 (defn- print-dispatch [expr _]
   (let [{:keys [value evaled?]} expr]
     (cond (not evaled?) :unevaluated
           (error? value)                  js/Error
           (function? value)               js/Function
           :else                           :default)))
-
-(defmulti print-value print-dispatch)
-
 
 (defn- print-value*
   [opts owner]
@@ -115,23 +115,24 @@
                  :readonly true
                  :content  content})))))
 
+(defmulti print-value print-dispatch)
+
 (defmethod print-value :unevaluated
-  [_]
+  [_ owner]
   (om/component
     (dom/div #js {:className "evaluation-spinner"}
              (dom/div #js {:className "fa fa-spinner fa-spin"}))))
 
 (defmethod print-value js/Error
-  [expr]
-  (let [{:keys [value]} expr]
+  [expr owner]
     (reify
       om/IRender
       (render [_]
         (dom/div #js {:className "evaluation-error"}
-                 (print-str value))))))
+                 (:value-str expr)))))
 
 (defmethod print-value js/Function
-  [expr]
+  [expr owner]
   (let [f (expr :value)
         fname (function-name f)]
     (reify
@@ -142,23 +143,24 @@
                            {:content  (str "Procedure#" fname)}))))))
 
 (defmethod print-value :default
-  [expr]
+  [expr owner]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:className "expression-value"}
                (om/build print-value*
-                         {:content  (print-cursor (expr :value))})))))
+                         {:content (:value-str expr)})))))
 
-(defn- print-expression [expression owner]
-  (let [{:keys [code value out]} expression]
+(defn- print-expression
+  [expr owner]
+  (let [{:keys [code value out]} expr]
     (om/component
       (dom/li #js {:className "repl-expression"}
-          (om/build print-code expression)
+          (om/build print-code expr)
           (dom/hr #js {:className "seam"})
           (when (seq out)
             (dom/pre #js {:className "expression-out"} out))
-          (om/build print-value expression)))))
+          (om/build print-value expr)))))
 
 (defn- repl-printer [session owner]
   (om/component
@@ -191,18 +193,12 @@
 ;; Updating repl component state
 ;; =============================
 
-(defn- set-expr-value!
-  [session index value]
-  (om/transact! session
-                [:history index]
-                (fn [expr]
-                  (assoc expr :evaled? true :value value))))
-
 (defn wrap-code
   "Wrap user expression code in a set! call for capturing its value in the
    dynamic *return* var."
   [code]
-  (str "(set! minirepl.repl/*return* (do " code "))"))
+  (str "(set! minirepl.repl/*value* (do " code "))"
+       "(set! minirepl.repl/*value-str* (pr-str minirepl.repl/*value*))"))
 
 (defn read!
   "Sends an asynchronous request to compile a user expression.
@@ -226,31 +222,27 @@
 
 (defmethod eval! :compiler-error
   [session index compiler-object]
-  (set-expr-value! session index (:compiler-error compiler-object)))
-
-(defn make-printfn [session]
-  (fn [s]
-    (let [last-index (max 0 (dec (count (:history @session))))]
-      (om/transact! session
-                    [:history last-index :out]
-                    (fn [out]
-                      (str out s))))))
-
-(defn force-lazy [coll]
-  (when (seq? coll)
-    (doall coll)
-    (doseq [x coll]
-      (force-lazy x))))
+  (om/transact! session
+                [:history index]
+                #(assoc % :value (:compiler-error compiler-object))))
 
 (defmethod eval! :compiled-js
   [session index compiler-object]
   (within session
            index
            #(execjs! (:compiled-js compiler-object)))
-  (let [[value]     (session-state)]
-    (clear-session-state!)
-    (force-lazy value)
-    (set-expr-value! session index value)))
+  (let [value     *value*
+        value-str *value-str*
+        out       *out*]
+    (clear-eval-state!)
+    (om/transact! session
+                  [:history index]
+                  (fn [expr]
+                    (assoc expr
+                           :out       out
+                           :value     value
+                           :value-str value-str
+                           :evaled?   true)))))
 
 
 ;; Main component
@@ -267,7 +259,9 @@
     (will-mount [_]
       (set! *print-readably* true)
       (set! *print-newline* true)
-      (set! *print-fn* (make-printfn session))
+      (set! *print-length* 100)
+      (set! *print-fn* (fn [s]
+                         (set! *out* (str *out* s))))
       (let [{:keys [source-chan compiler-chan]} (om/get-state owner)]
         (util/consume-channel
           (fn [code]
