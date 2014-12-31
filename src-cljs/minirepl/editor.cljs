@@ -35,12 +35,14 @@
     om/IInitState
     (init-state [_] {})
 
-    om/IDidUpdate
-    (did-update [_ prev-props _]
-      (when (not= (:first-number options) (:first-number prev-props))
-        (.setOption (om/get-state owner :cm)
-                    "firstLineNumber"
-                    (options :first-number))))
+    om/IWillUpdate
+    (will-update [_ next-props _]
+      (let [cm (om/get-state owner :cm)
+            {:keys [content first-number]} (om/get-props owner)]
+        (when (not= first-number (:first-number next-props))
+          (.setOption cm "firstLineNumber" first-number))
+        (when (not= content (:content next-props))
+          (.setValue cm content))))
 
     om/IDidMount
     (did-mount [_]

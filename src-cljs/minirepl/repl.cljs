@@ -103,6 +103,7 @@
 
 (defmulti print-value print-dispatch)
 
+
 (defn- print-value*
   [opts owner]
   (let [{:keys [content]} opts]
@@ -150,20 +151,22 @@
                          {:content  (print-cursor (expr :value))})))))
 
 (defn- print-expression [expression owner]
-  (let [{:keys [code value]} expression]
+  (let [{:keys [code value out]} expression]
     (om/component
-        (dom/li #js {:className "repl-expression"}
-            (om/build print-code expression)
-            (dom/hr #js {:className "seam"})
-            (om/build print-value expression)))))
+      (dom/li #js {:className "repl-expression"}
+          (om/build print-code expression)
+          (dom/hr #js {:className "seam"})
+          (when (seq out)
+            (dom/pre #js {:className "expression-out"} out))
+          (om/build print-value expression)))))
 
 (defn- repl-printer [session owner]
   (om/component
-      (apply
-        dom/ul #js {:className "repl-printer"}
-        (om/build-all print-expression
-                      (:history session)
-                      {:key :line-number}))))
+    (apply
+      dom/ul #js {:className "repl-printer"}
+      (om/build-all print-expression
+                    (:history session)
+                    {:key :line-number}))))
 
 ;; Reading user expressions
 ;; ========================
@@ -225,11 +228,28 @@
   [session index compiler-object]
   (set-expr-value! session index (:compiler-error compiler-object)))
 
+(defn make-printfn [session]
+  (fn [s]
+    (let [last-index (max 0 (dec (count (:history @session))))]
+      (om/transact! session
+                    [:history last-index :out]
+                    (fn [out]
+                      (str out s))))))
+
+(defn force-lazy [coll]
+  (when (seq? coll)
+    (doall coll)
+    (doseq [x coll]
+      (force-lazy x))))
+
 (defmethod eval! :compiled-js
   [session index compiler-object]
-  (within session index #(execjs! (:compiled-js compiler-object)))
+  (within session
+           index
+           #(execjs! (:compiled-js compiler-object)))
   (let [[value]     (session-state)]
     (clear-session-state!)
+    (force-lazy value)
     (set-expr-value! session index value)))
 
 
@@ -245,6 +265,9 @@
 
     om/IWillMount
     (will-mount [_]
+      (set! *print-readably* true)
+      (set! *print-newline* true)
+      (set! *print-fn* (make-printfn session))
       (let [{:keys [source-chan compiler-chan]} (om/get-state owner)]
         (util/consume-channel
           (fn [code]
