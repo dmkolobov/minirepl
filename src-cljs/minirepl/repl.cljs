@@ -202,7 +202,7 @@
   "Wrap user expression code in a set! call for capturing its value in the
    dynamic *return* var."
   [code]
-  (str "(set! minirepl.repl/*return* " code ")"))
+  (str "(set! minirepl.repl/*return* (do " code "))"))
 
 (defn read!
   "Sends an asynchronous request to compile a user expression.
