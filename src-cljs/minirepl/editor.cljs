@@ -14,9 +14,10 @@
             :Cmd-R (constantly nil)}))
 
 (defn base-config [theme]
-  {:mode              "clojure"
-   :matchBrackets     true
-   :theme             theme})
+  {:mode          "clojure"
+   :matchBrackets true
+   :theme         theme
+   :lineWrapping  true})
 
 (defn parse-options [submit-chan options]
   (let [{:keys [content readonly number theme first-number]} options]

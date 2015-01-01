@@ -151,6 +151,13 @@
                (om/build print-value*
                          {:content (:value-str expr)})))))
 
+(defn- print-out
+  [[out] owner]
+  (om/component
+   (dom/div #js {:className "expression-out"}
+            (om/build print-value*
+                      {:content out}))))
+
 (defn- print-expression
   [expr owner]
   (let [{:keys [code value out]} expr]
@@ -159,7 +166,7 @@
           (om/build print-code expr)
           (dom/hr #js {:className "seam"})
           (when (seq out)
-            (dom/pre #js {:className "expression-out"} out))
+            (om/build print-out [out]))
           (om/build print-value expr)))))
 
 (defn- repl-printer [session owner]
