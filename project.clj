@@ -14,7 +14,7 @@
                  [cljs-ajax "0.3.3"]
                  [noir-exception "0.2.3"]
                  [lib-noir "0.9.4"]
-                 [org.clojure/clojurescript "0.0-2371"]
+                 [org.clojure/clojurescript "0.0-2511"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojure/clojure "1.6.0"]
                  [om "0.8.0-beta5"]
