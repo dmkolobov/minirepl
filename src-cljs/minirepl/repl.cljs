@@ -58,7 +58,8 @@
         nth-value (comp (fn [expr _] (:value expr)) util/nth-or-nil)]
     (binding [user-session/*one   (nth-value rhistory 1)
               user-session/*two   (nth-value rhistory 2)
-              user-session/*three (nth-value rhistory 3)]
+              user-session/*three (nth-value rhistory 3)
+              user-session/dvar   (fn [sym] (get-in user-session/*var-map* [sym]))]
       (f))))
 
 (defn execjs!

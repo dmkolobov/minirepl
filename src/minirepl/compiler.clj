@@ -86,9 +86,6 @@
          var-pass   (->cljs* var-source
                              expr-ns
                              (:continue first-pass))]
-     (println expr-ns)
-     (println (:comp-ns first-pass))
-     (println (str "var-source: " var-source))
      (str (:comp-js first-pass)
           (:comp-js var-pass)))))
 
