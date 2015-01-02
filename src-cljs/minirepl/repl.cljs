@@ -53,7 +53,7 @@
 (defn within
   "Invoke the function f with the dynamic bindings established by
    the session context."
-  [session line-number f]
+  [session line-number compiled-js]
   (let [rhistory  (reverse (:history session))
         nth-value (comp (fn [expr _] (:value expr)) util/nth-or-nil)]
     (binding [*print-newline*     true
@@ -63,14 +63,8 @@
               user-session/*two   (nth-value rhistory 2)
               user-session/*three (nth-value rhistory 3)
               user-session/dvar   (fn [sym] (get-in user-session/*var-map* [sym]))]
-      (f))))
-
-(defn execjs!
-  "Evaluate compiled user expression in a try-catch block.
-   On error, set the *return* to the caught error instance."
-  [compiled-js]
-  (try (js/eval compiled-js)
-       (catch :default e (set! *value* e))))
+      (try (js/eval compiled-js)
+           (catch :default e (set! *value* e))))))
 
 ;;;; Types
 ;;;; =====
@@ -133,7 +127,7 @@
       om/IRender
       (render [_]
         (dom/div #js {:className "evaluation-error"}
-                 (:value-str expr)))))
+                 (.-message (:value expr))))))
 
 (defmethod print-value js/Function
   [expr owner]
@@ -144,7 +138,7 @@
       (render [_]
         (dom/div #js {:className "expression-value"}
                  (om/build print-value*
-                           {:content  (str "Procedure#" fname)}))))))
+                           {:content  (:value-str expr)}))))))
 
 (defmethod print-value :default
   [expr owner]
@@ -240,8 +234,9 @@
 (defmethod eval! :compiled-js
   [session index compiler-object]
   (within session
-           index
-           #(execjs! (:compiled-js compiler-object)))
+          index
+          (:compiled-js compiler-object))
+           ;; #(execjs! (:compiled-js compiler-object)))
   (let [value     *value*
         value-str *value-str*
         out       *out*]

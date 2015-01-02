@@ -38,11 +38,11 @@
 
     ;; BUG: This change causes incorrect line numbers in the reader.
     ;;      This is may or may not be the place to fix it.
-    om/IWillUpdate
-    (will-update [_ next-props _]
+    om/IDidUpdate
+    (did-update [_ prev-props _]
       (let [cm (om/get-state owner :cm)
-            {:keys [content first-number]} (om/get-props owner)]
-        (when (not= first-number (:first-number next-props))
+            {:keys [content first-number]} options]
+        (when (not= first-number (:first-number prev-props))
           (.setOption cm "firstLineNumber" first-number))
         (when (not= content (:content next-props))
           (.setValue cm content))))
