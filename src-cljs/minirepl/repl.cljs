@@ -50,7 +50,7 @@
 ;;;; JavaScript Execution
 ;;;; ====================
 
-(defn within
+(defn eval-js!
   "Invoke the function f with the dynamic bindings established by
    the session context."
   [session line-number compiled-js]
@@ -233,10 +233,9 @@
 
 (defmethod eval! :compiled-js
   [session index compiler-object]
-  (within session
-          index
-          (:compiled-js compiler-object))
-           ;; #(execjs! (:compiled-js compiler-object)))
+  (eval-js! session
+            index
+            (:compiled-js compiler-object))
   (let [value     *value*
         value-str *value-str*
         out       *out*]
@@ -249,7 +248,6 @@
                            :value     value
                            :value-str value-str
                            :evaled?   true)))))
-
 
 ;; Main component
 ;; ==============

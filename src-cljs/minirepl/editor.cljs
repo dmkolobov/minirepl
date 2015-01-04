@@ -44,7 +44,7 @@
             {:keys [content first-number]} options]
         (when (not= first-number (:first-number prev-props))
           (.setOption cm "firstLineNumber" first-number))
-        (when (not= content (:content next-props))
+        (when (not= content (:content prev-props))
           (.setValue cm content))))
 
     om/IDidMount
